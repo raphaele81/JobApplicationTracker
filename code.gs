@@ -2,8 +2,9 @@ function getGmailMessages() {
   // Search query for job application emails received after August 1, 2024
   //const searchQuery = 'Application -{Linkedin Indeed catchafire} after:2024/5/5 before:2025/5/6';
   //const searchQuery = 'Job application -{hirist.tech, indeed, linkedin, glassdoor} after:2024/08/01'
-  const searchQuery = "from:rbc@myworkday.com" 
-  const threads = GmailApp.search(searchQuery, 0, 2); 
+  //const searchQuery = "from:rbc@myworkday.com" 
+  const searchQuery = "in:inbox after:2024/05/24 before:2027/08/25"
+  const threads = GmailApp.search(searchQuery, 0, 500); 
   let totalusedtokensinloop = 0
   // Loop through the threads, starting from the oldest thread
   for (let i = threads.length - 1; i >= 0; i--) {
@@ -19,7 +20,6 @@ function getGmailMessages() {
       const subjectplusbody = "subject: " + message.getSubject() + " body: " + body;
       const subjectplusbodysnip = message.getSubject() + " " + body.substring(0,100)
       
-      const emailLink = message.getThread().getPermalink(); // Get the permalink to the thread
 
       const is_relavant = queryGeminiforsubject(subjectplusbodysnip);
       if(
@@ -30,11 +30,25 @@ function getGmailMessages() {
       
       if (jobInfo) {
         try {
-              const status = jobInfo.status;
-              const jobTitle = jobInfo.jobTitle;
+
+              //email info
+              const emailLink = message.getThread().getPermalink(); // Get the permalink to the thread
+              const threadID = message.getThread().getId(); // Get the thread ID
+              const sender = message.getFrom();
+              const modifiedDate = formatDate(new Date());
+
+              //job info extract
               const company = jobInfo.company;
+              const position = jobInfo.position;
+              const status = jobInfo.status;
+              const jdLink = jobInfo.jdLink;
+              const source = jobInfo.source;
               const location = jobInfo.location;
-              const update = jobInfo.update;
+              const nextStepDate = jobInfo.nextStepDate;
+              const salaryRange = jobInfo.salaryRange;
+              const notes = jobInfo.notes;
+              
+              const matchKey = company + " | " + position;
 
               // Format the date
               const formattedDate = formatDate(date);
@@ -43,7 +57,7 @@ function getGmailMessages() {
               
 
               // Call the function to input data into the sheet
-              input_to_sheet(status, jobTitle, company, location, update, formattedDate, emailLink);
+              input_to_sheet(threadID, matchKey, date, company, position,  status, modifiedDate, emailLink, jdLink, sender, source ,location, nextStepDate, salaryRange, notes);
               Logger.log("input 1 email to the sheet, " + " Total tokens used: " + totalusedtokensinloop);
         } catch (parseError) {
           Logger.log("Error parsing job info: " + parseError);
@@ -59,8 +73,3 @@ function getGmailMessages() {
     }
   }
 }
-
-
-
-
-
