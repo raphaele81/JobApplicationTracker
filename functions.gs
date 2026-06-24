@@ -2,7 +2,7 @@ function queryGeminiforsubject(subjectplusbodysnip) {
   const properties = PropertiesService.getScriptProperties().getProperties();
   const geminiApiKey = properties['GOOGLE_API_KEY'];
   
-  const geminiEndpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite:generateContent?key=${geminiApiKey}`;
+  const geminiEndpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key=${geminiApiKey}`;
   
   const query = `Read the attached email and decide whether it relates to one of MY job applications — e.g. an application confirmation, a recruiter reply, an interview invitation/scheduling, a rejection, or an offer. Generic job alerts, newsletters, or marketing emails are NOT job-related.
 
