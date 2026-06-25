@@ -9,7 +9,7 @@ function trackJobApplication() {
   const searchQuery = "-label:nonJD in:inbox after:2026/06/24"
 
   // target spreadsheet URL
-  const spreadsheetUrl = "https://docs.google.com/spreadsheets/d/14NW2dPPBKsc5VoSponMJvgFXgmPIQi8nr_yi4YiUHnY/edit?gid=0#gid=0";
+  const spreadsheetUrl = "https://docs.google.com/spreadsheets/d/ccccccccccc";
   const speadsheetTab = "Applications"
 
   // model name and model to use for checking if email is related to a job application - can be done with a simple model
