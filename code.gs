@@ -1,75 +1,40 @@
-function getGmailMessages() {
-  // Search query for job application emails received after August 1, 2024
+function trackJobApplication() {
+
+
+  // Search query for emails to track - 
   //const searchQuery = 'Application -{Linkedin Indeed catchafire} after:2024/5/5 before:2025/5/6';
   //const searchQuery = 'Job application -{hirist.tech, indeed, linkedin, glassdoor} after:2024/08/01'
   //const searchQuery = "from:rbc@myworkday.com" 
-  const searchQuery = "in:inbox after:2024/05/24 before:2027/08/25"
-  const threads = GmailApp.search(searchQuery, 0, 500); 
-  let totalusedtokensinloop = 0
-  // Loop through the threads, starting from the oldest thread
-  for (let i = threads.length - 1; i >= 0; i--) {
-    const messages = threads[i].getMessages();
+  //const searchQuery = "-label:nonJD in:inbox after:2025/04/01 before:2025/05/01"
+  const searchQuery = "-label:nonJD in:inbox after:2026/06/24"
 
-    // Loop through the messages within each thread, starting from the oldest message
-    for (let j = messages.length - 1; j >= 0; j--) {
-      const message = messages[j];
-      
-      // Extract details from the email
-      const date = message.getDate();
-      const body = message.getPlainBody(); // Using plain text body for better compatibility
-      const subjectplusbody = "subject: " + message.getSubject() + " body: " + body;
-      const subjectplusbodysnip = message.getSubject() + " " + body.substring(0,100)
-      
+  // target spreadsheet URL
+  const spreadsheetUrl = "https://docs.google.com/spreadsheets/d/ccccccccccc";
+  const speadsheetTab = "Applications"
 
-      const is_relavant = queryGeminiforsubject(subjectplusbodysnip);
-      if(
-        is_relavant == 1
-      ){
-        var {jobInfo, totalTokenCount} = queryGeminiforBody(subjectplusbody, date)
-        // Check if 'joninfo' exists and has elements
-      
-      if (jobInfo) {
-        try {
+  // model name and model to use for checking if email is related to a job application - can be done with a simple model
+  const modelNameSubject = "google"
+  const aiModelBSubject = "gemini-3.1-flash-lite"
 
-              //email info
-              const emailLink = message.getThread().getPermalink(); // Get the permalink to the thread
-              const threadID = message.getThread().getId(); // Get the thread ID
-              const sender = message.getFrom();
-              const modifiedDate = formatDate(new Date());
+  //const aiModelBSubject = "gemini-2.5-flash"
 
-              //job info extract
-              const company = jobInfo.company;
-              const position = jobInfo.position;
-              const status = jobInfo.status;
-              const jdLink = jobInfo.jdLink;
-              const source = jobInfo.source;
-              const location = jobInfo.location;
-              const nextStepDate = jobInfo.nextStepDate;
-              const salaryRange = jobInfo.salaryRange;
-              const notes = jobInfo.notes;
-              
-              const matchKey = company + " | " + position;
+  
+  //const modelName = "openai"
+  //const aiModel = "gpt-5.4-mini"
+  //const modelName = "deepseek"
+  //const aiModel = "deepseek-chat"
+   //const aiModel = "gemini-3.5-flash"
+  //const aiModel = "gemini-3.1-flash-lite" 
 
-              // Format the date
-              const formattedDate = formatDate(date);
+  //More advanced model to process the email body and classify information
+  const modelNameBody = "google"
+  const aiModelBody = "gemini-3.1-flash-lite"
+  
 
-              totalusedtokensinloop += totalTokenCount
-              
+  getGmailMessages(searchQuery, modelNameSubject, aiModelBSubject, modelNameBody, aiModelBody, spreadsheetUrl, speadsheetTab)
 
-              // Call the function to input data into the sheet
-              input_to_sheet(threadID, matchKey, date, company, position,  status, modifiedDate, emailLink, jdLink, sender, source ,location, nextStepDate, salaryRange, notes);
-              Logger.log("input 1 email to the sheet, " + " Total tokens used: " + totalusedtokensinloop);
-        } catch (parseError) {
-          Logger.log("Error parsing job info: " + parseError);
-          }
-      } else {
-        Logger.log("No valid content found in the response.");
-      }    
-          }
-          else{
-            Logger.log("Skipped: " + subjectplusbodysnip.substring(0,60))
-            continue
-          } 
-    }
-  }
+
 }
+
+
+

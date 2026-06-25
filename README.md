@@ -6,14 +6,14 @@ JobApplicationTracker is a Google Apps Script project designed to automate and m
 
 ### Automated Email Parsing
 - Uses Gmail API to search for job-related emails based on a customizable query.
-- Filters emails for relevance using a two-step process with Gemini's language models.
+- Filters emails for relevance using a two-step process with thr AI model of your choice between Google Gemini, OpenAI chatGPT or deepseek.
 
 ### Intelligent Email Classification
-- The script first uses a smaller model (8B parameters) to determine if an email is relevant based on its subject.
+- The script first uses a smaller model to determine if an email is relevant based on its subject.
 - If the email is relevant, a larger model processes the body to extract key job information.
 
 ### Detailed Data Extraction
-- The script extracts job status, title, company, location, and any status updates.
+- The script extracts position, company, location, any status updates and few other relevant information
 - Additionally, it logs the date of the email and provides a link to the original email thread.
 
 ### Google Sheets Integration
@@ -26,7 +26,11 @@ JobApplicationTracker is a Google Apps Script project designed to automate and m
 ### Prerequisites
 - **Google Apps Script**: Ensure you have access to Google Apps Script linked with your Gmail and Google Sheets.
 - **Gmail API**: Enable Gmail API access for your Google account.
-- **GeminiAPI Access**: Obtain a GeminiAPI key and enable access to the required models.
+- **GeminiAPI Access**: Obtain a GeminiAPI key and enable access to the required models (if using)
+- **OpenAiAPI Access**: Obtain a OpenAiAPI key and enable access to the required models (if using)
+- **DeepSeekAPI Access**: Obtain a DeepSeekAPI key and enable access to the required models (if using)
+
+
 
 ### Installation Steps
 1. **Clone or Download the Repository**
@@ -34,18 +38,35 @@ JobApplicationTracker is a Google Apps Script project designed to automate and m
 
 2. **Set Up the Google Apps Script**
    - Open Google Apps Script in your browser.
-   - Create a new project and paste the code from `code.gs` and `functions.gs` into separate script files.
+   - Create a new project and paste the code from `code.gs`, `gmailCallfunctions.gs` and `queryAiFunctions.gs` into separate script files.
 
 3. **Configure Script Properties**
    - Set your `GOOGLE_API_KEY` in the script properties to authenticate API requests.
-
-4. **Google Sheets Setup**
+   - Set your `GOOGLE_ENDPOINT` in the script properties for API requests.
+     if using
+   - Set your `DEEPSEEK_API_KEY` in the script properties to authenticate API requests.
+   - Set your `DEEPSEEK_ENDPOINT` in the script properties for API requests.
+   - Set your `OPENAI_API_KEY` in the script properties to authenticate API requests.
+   - Set your `OPENAI_ENDPOINT` in the script properties for API requests.
+  
+4. **AI Models set up**
+   - in the `trackJobApplication` function within `code.gs`
+      - setup the modelNameSubject and aiModelBSubject you want to use to identify whether an email is related to a          job application (smaller model)
+       e.g.     const modelNameSubject = "google"
+                const aiModelBSubject = "gemini-3.1-flash-lite"
+      - setup the modelNameBody and aiModelBody you want to use to identify whether an email is related to a job application (larger model)
+        
+5. **Google Sheets Setup**
    - Create a new Google Sheets document.
-   - Note the URL of your Google Sheets document and update it in the `input_to_sheet` function within `functions.gs`.
+   - Note the URL of your Google Sheets document and update it in the `trackJobApplication` function within `code.gs` ( const spreadsheetUrl) .
+   - Note the tab name of your Google Sheets were you want to track your application and update in `trackJobApplication` function within `code.gs` (const speadsheetTab).
+  
+6. **Gmail Search**
+   - in the `trackJobApplication` function within `code.gs`, update the searchQuery constant with your custom google search that will be used to scan the emails
 
-5. **Run the Script**
+7. **Run the Script**
    - Authorize the script to access your Gmail and Google Sheets. 
-   - Execute the `getGmailMessages` function to start the job application tracking process.
+   - Execute the `trackJobApplication` function to start the job application tracking process.
 
 ## How It Works
 
