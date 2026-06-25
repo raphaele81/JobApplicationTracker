@@ -1,6 +1,6 @@
 # JobApplicationTracker
 
-JobApplicationTracker is a Google Apps Script project designed to automate and manage the tracking of job applications using Gmail and the GeminiAPI. This script filters job-related emails and extracts crucial information, such as job titles, company names, application statuses, and more, and inputs them into a Google Sheets document.
+JobApplicationTracker is a Google Apps Script project designed to automate and manage the tracking of job applications using Gmail and either GeminiAPI, DeepSeekAPI or OpenAiAPI (or a mix of 2). This script filters job-related emails and extracts crucial information, such as job titles, company names, application statuses, and more, and inputs them into a Google Sheets document.
 
 ## Features
 
