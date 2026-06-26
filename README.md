@@ -109,4 +109,4 @@ This project is open-sourced under the MIT License.
 For any issues or feature requests, please open an issue on GitHub.
 
 ## Author
-Developed by Prayag Purohit.
+Developed by Raphaele Motte - Forked from initial project by Prayag Purohit.
