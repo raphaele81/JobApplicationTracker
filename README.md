@@ -21,6 +21,7 @@ JobApplicationTracker is a Google Apps Script project that automates the end-to-
 - **Google Account**: Access to Google Apps Script, Gmail, and Google Sheets.
 - **API Credentials**: At least one active API key (Gemini, OpenAI, or DeepSeek) with enabled access to your chosen models.
 - **Resume**: Have a resume in your google documents
+- **Job Alerts**: Set up some Job Alerts on at least 1 of those platforms: linkedin, JobsDB, Michael Page, eFinancialCareers.
 
 
 ### Installation Steps
