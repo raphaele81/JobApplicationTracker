@@ -3,8 +3,6 @@
  */
 function getAIConfiguration(modelName, aiModel) {
   const scriptProperties = PropertiesService.getScriptProperties();
-
-  // Normalize the input to match your property keys
   const prefix = modelName.toUpperCase();
 
   return {
@@ -33,7 +31,7 @@ function queryAIforJobApplicationSubject(subjectplusbodysnip, aiConf) {
 
 
   const jsonResponse = callAI(aiConf, prompt)
-  return jsonResponse.is_job_related;
+  return jsonResponse ? jsonResponse.is_job_related : 0;
 
 }
 
@@ -76,15 +74,14 @@ function queryAIforJobApplicationBody(subjectplusbody, aiConf) {
   //Logger.log(prompt);
   // Make the API call and handle the response
   const response = callAI(aiConf, prompt);
-  return response.job_info[0]
-
+  return response && response.job_info ? response.job_info[0] : null;
 }
 
+/**
+ * Cleaned date formatting utility using native Apps Script services
+ */
 function formatDate(date) {
-  const day = date.getDate();
-  const month = date.getMonth() + 1; // Months are zero-based
-  const year = date.getFullYear();
-  return `${year}-${month < 10 ? '0' + month : month}-${day < 10 ? '0' + day : day}`;
+  return Utilities.formatDate(date, Session.getScriptTimeZone(), "yyyy-MM-dd");
 }
 
 /**
@@ -133,124 +130,99 @@ function queryAIforJobMatching(aiConf, resumeText, body) {
 
 }
 
+
+// ==========================================
+// AI MODEL PROVIDERS (STRATEGY REGISTRY)
+// ==========================================
+const PROVIDERS = {
+  google: {
+    buildRequest(config, prompt, systemMessage) {
+      const payload = {
+        "contents": [{ "parts": [{ "text": prompt }] }],
+        "systemInstruction": { "parts": [{ "text": systemMessage }] },
+        "generationConfig": {
+          "temperature": 0.2,
+          "responseMimeType": "application/json"
+        }
+      };
+      return {
+        url: `${config.endpoint}${config.aiModel}:generateContent?key=${encodeURIComponent(config.apiKey)}`,
+        options: {
+          method: 'post',
+          contentType: 'application/json',
+          payload: JSON.stringify(payload),
+          muteHttpExceptions: true
+        }
+      };
+    },
+    extractText(data) {
+      return data.candidates?.[0]?.content?.parts?.[0]?.text || "";
+    }
+  },
+  openai: {
+    buildRequest(config, prompt, systemMessage) {
+      const payload = {
+        "model": config.aiModel,
+        "messages": [
+          { "role": "system", "content": systemMessage },
+          { "role": "user", "content": prompt }
+        ],
+        "temperature": 0.2,
+        "response_format": { "type": "json_object" }
+      };
+      return {
+        url: config.endpoint,
+        options: {
+          method: 'post',
+          contentType: 'application/json',
+          headers: { 'Authorization': `Bearer ${config.apiKey}` },
+          payload: JSON.stringify(payload),
+          muteHttpExceptions: true
+        }
+      };
+    },
+    extractText(data) {
+      return data.choices?.[0]?.message?.content || "";
+    }
+  }
+};
+
+// Map DeepSeek directly to use OpenAI's handlers (since they share the exact same payload/extraction layout)
+PROVIDERS.deepseek = PROVIDERS.openai;
+
+
 /**
  * Generic AI integration function
  * Automatically handles routing, JSON-mode enforcement, rate-limiting, 
- * and normalizes responses across Google Gemini, OpenAI, and DeepSeek.
- * 
- * @param {Object} config - Configuration object containing credentials, endpoints, and model info
- * @param {string} prompt - The primary user prompt
- * @param {string} [systemInstruction] - Optional system personality instruction
- * @returns {Object|string} Automatically parsed JSON object or plain-text string
+ * and normalizes responses across registered providers.
  */
 function callAI(config, prompt, systemInstruction) {
-  let payload = null;
-  let options = null;
-  let url = config.endpoint;
-  const systemMessage = systemInstruction || "You are a helpful career coach.";
-
-  // Define the payload and options based on the model 
-  // Google
-  if (config.modelName == "google") {
-    payload = {
-      "contents": [
-        {
-          "parts": [
-            { "text": prompt }
-          ]
-        }
-      ],
-      "systemInstruction": {
-        "parts": [
-          { "text": systemMessage }
-        ]
-      },
-      "generationConfig": {
-        "temperature": 0.2,
-        "responseMimeType": "application/json" // Enforces structured JSON output
-      },
-    };
-
-    options = {
-      'method': 'post',
-      'contentType': 'application/json',
-      'payload': JSON.stringify(payload),
-      "muteHttpExceptions": true
-    };
-
-    url = config.endpoint + config.aiModel + ":generateContent?key=" + encodeURIComponent(config.apiKey);
-
-    // DeepSeek
-  } else if (config.modelName == "deepseek") {
-    payload = {
-      "model": config.aiModel,
-      "messages": [
-        { "role": "system", "content": systemMessage },
-        { "role": "user", "content": prompt }
-      ],
-      "temperature": 0.2,
-      "response_format": { "type": "json_object" } // Enforces structured JSON output
-    };
-
-    options = {
-      'method': 'post',
-      'contentType': 'application/json',
-      'headers': { 'Authorization': 'Bearer ' + config.apiKey },
-      'payload': JSON.stringify(payload),
-      'muteHttpExceptions': true
-    };
-
-    // OpenAI
-  } else if (config.modelName == "openai") {
-    payload = {
-      "model": config.aiModel,
-      "messages": [
-        { "role": "system", "content": systemMessage },
-        { "role": "user", "content": prompt }
-      ],
-      "temperature": 0.2,
-      "response_format": { "type": "json_object" } // Enforces structured JSON output
-    };
-
-    options = {
-      'method': 'post',
-      'contentType': 'application/json',
-      'headers': { 'Authorization': 'Bearer ' + config.apiKey },
-      'payload': JSON.stringify(payload),
-      'muteHttpExceptions': true
-    };
+  const provider = PROVIDERS[config.modelName.toLowerCase()];
+  if (!provider) {
+    throw new Error(`Unsupported model provider: "${config.modelName}"`);
   }
 
-  // Execute the call with backoff-based retry mechanism
+  const systemMessage = systemInstruction || "You are a helpful career coach.";
+  const { url, options } = provider.buildRequest(config, prompt, systemMessage);
+
+  // Execute the fetch with a backoff-based retry mechanism
   let retries = 5;
   let delay = 1100; // Start with a 1.1-second delay
 
   while (retries > 0) {
-    let response = UrlFetchApp.fetch(url, options);
-    let code = response.getResponseCode();
+    const response = UrlFetchApp.fetch(url, options);
+    const code = response.getResponseCode();
 
-    if (code == 200) {
+    if (code === 200) {
       const responseData = JSON.parse(response.getContentText());
-      let textContent = "";
+      const textContent = provider.extractText(responseData);
 
-      // Normalize extraction based on provider structures
-      if (config.modelName == "google") {
-        if (responseData.candidates && responseData.candidates[0].content && responseData.candidates[0].content.parts[0]) {
-          textContent = responseData.candidates[0].content.parts[0].text;
-        }
-      } else if (config.modelName == "openai" || config.modelName == "deepseek") {
-        if (responseData.choices && responseData.choices[0].message) {
-          textContent = responseData.choices[0].message.content;
-        }
-      }
-
-      // Parse text into a structured JSON object if possible, otherwise return plain text
+      // Attempt parsing as JSON; fall back to plain text if parsing fails
       try {
         return JSON.parse(textContent);
       } catch (e) {
         return textContent;
       }
-
     } else if (code === 429) {
       console.warn(`Rate limited (429). Waiting ${delay}ms before retrying...`);
       Utilities.sleep(delay);
@@ -263,3 +235,4 @@ function callAI(config, prompt, systemInstruction) {
   }
   throw new Error("Maximum retries reached. Please slow down your requests.");
 }
+
