@@ -5,8 +5,8 @@
  */
 
 // ==================== CONFIGURATION ====================
-const SPREAD_SHEET_URL = "https://docs.google.com/spreadsheets/d/14NW2dPPBKsc5VoSponMJvgFXgmPIQi8nr_yi4YiUHnY/edit?gid=0#gid=0"; // Spreadsheet url
-const RESUME_DOC_URL = "https://docs.google.com/document/d/1H0lj-yvPCssDTSAoFsZQV-hSI0K7QgSevuBAk5uHiHs/edit?tab=t.0#heading=h.3xtv3d46zdx3";  // Paste the URL of your Resume Google Doc
+const SPREAD_SHEET_URL = "https://docs.google.com/spreadsheets/xxxx"; // Spreadsheet url
+const RESUME_DOC_URL = "https://docs.google.com/document/d/xxxx";  // Paste the URL of your Resume Google Doc
 
 const TRACKER_SHEET_NAME = "Applications";          // Name of your active application tracker tab
 const MATCHES_SHEET_NAME = "JD";            // Name of the tab where identified matching JDs should go
