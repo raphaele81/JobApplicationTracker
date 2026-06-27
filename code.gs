@@ -1,40 +1,70 @@
-function trackJobApplication() {
+/**
+ * JOB APPLICATIONS and JOB ALERTS TRACKING AUTOMATION & AI MATCHING
+ * Reads job alerts from Gmail, matches against a Google Doc Resume,
+ * and appends new matches to your spreadsheet tracking sheet.
+ */
+
+// ==================== CONFIGURATION ====================
+const SPREAD_SHEET_URL = "https://docs.google.com/spreadsheets/xxxx"; // Spreadsheet url
+const RESUME_DOC_URL = "https://docs.google.com/document/d/xxxx";  // Paste the URL of your Resume Google Doc
+
+const TRACKER_SHEET_NAME = "Applications";          // Name of your active application tracker tab
+const MATCHES_SHEET_NAME = "JD";            // Name of the tab where identified matching JDs should go
+
+const GMAIL_SEARCH_QUERY_JOB_APPLICATION = "-label:nonJD in:inbox after:2026/06/25";     // Gmail search for Job Application related emails
+const GMAIL_SEARCH_QUERY_JD = "label:jobAlert after:2026/06/24";            // Gmail search for Job Alter emails
+
+const AI_SIMPLE_MODEL_PROVIDER = "google"
+const AI_SIMPLE_MODEL_NAME = "gemini-3.1-flash-lite"
+
+const AI_COMPLEX_MODEL_PROVIDER = "google"
+const AI_COMPLEX_MODEL_NAME = "gemini-3.1-flash-lite"
+
+//const modelProvider = "openai"
+//const modelName = "gpt-5.4-mini"
+//const modelProvider = "deepseek"
+//const modelName = "deepseek-chat"
+//const modelName = "gemini-3.5-flash"
+//const modelName = "gemini-3.1-flash-lite" 
+//const modelName = "gemini-2.5-flash"
+// =======================================================
 
 
-  // Search query for emails to track - 
-  //const searchQuery = 'Application -{Linkedin Indeed catchafire} after:2024/5/5 before:2025/5/6';
-  //const searchQuery = 'Job application -{hirist.tech, indeed, linkedin, glassdoor} after:2024/08/01'
-  //const searchQuery = "from:rbc@myworkday.com" 
-  //const searchQuery = "-label:nonJD in:inbox after:2025/04/01 before:2025/05/01"
-  const searchQuery = "-label:nonJD in:inbox after:2026/06/24"
+/**
+ * Main function to process emails, check if they are related to job application 
+ * and track key application information in tracking spreadsheet
+ */
+function trackJobApplicationUpdates() {
 
-  // target spreadsheet URL
-  const spreadsheetUrl = "https://docs.google.com/spreadsheets/d/ccccccccccc";
-  const speadsheetTab = "Applications"
+  //Get Ai Configuration
+  const aiConfSubject = getAIConfiguration(AI_SIMPLE_MODEL_PROVIDER, AI_SIMPLE_MODEL_NAME);
+  if (!aiConfSubject.endpoint || !aiConfSubject.apiKey) {
+    throw new Error(`Configuration not found or incomplete for: ${modelNameSubject}`);
+  }
+  const aiConfBody = getAIConfiguration(AI_COMPLEX_MODEL_PROVIDER, AI_COMPLEX_MODEL_NAME);
+  if (!aiConfBody.endpoint || !aiConfBody.apiKey) {
+    throw new Error(`Configuration not found or incomplete for: ${modelNameBody}`);
+  }
 
-  // model name and model to use for checking if email is related to a job application - can be done with a simple model
-  const modelNameSubject = "google"
-  const aiModelBSubject = "gemini-3.1-flash-lite"
-
-  //const aiModelBSubject = "gemini-2.5-flash"
-
-  
-  //const modelName = "openai"
-  //const aiModel = "gpt-5.4-mini"
-  //const modelName = "deepseek"
-  //const aiModel = "deepseek-chat"
-   //const aiModel = "gemini-3.5-flash"
-  //const aiModel = "gemini-3.1-flash-lite" 
-
-  //More advanced model to process the email body and classify information
-  const modelNameBody = "google"
-  const aiModelBody = "gemini-3.1-flash-lite"
-  
-
-  getGmailMessages(searchQuery, modelNameSubject, aiModelBSubject, modelNameBody, aiModelBody, spreadsheetUrl, speadsheetTab)
-
+  //Scan email messages for Job Application related emails
+  processJobApplicationUpdates(aiConfSubject, aiConfBody)
 
 }
 
 
+/**
+ * Main function to process emails, check if they are related to job application 
+ * and track key application information in tracking spreadsheet
+ */
+function trackJobAlerts() {
 
+  //Get Ai Configuration
+  const aiConfBody = getAIConfiguration(AI_COMPLEX_MODEL_PROVIDER, AI_COMPLEX_MODEL_NAME);
+  if (!aiConfBody.endpoint || !aiConfBody.apiKey) {
+    throw new Error(`Configuration not found or incomplete for: ${modelNameBody}`);
+  }
+
+  //Scan Job Alerts emails messages
+  processJobAlerts(aiConfBody)
+
+}
