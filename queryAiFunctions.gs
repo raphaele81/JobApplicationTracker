@@ -1,9 +1,12 @@
+/**
+ *  get all properties to be able to call AI api based on given model information
+ */
 function getAIConfiguration(modelName, aiModel) {
   const scriptProperties = PropertiesService.getScriptProperties();
-  
+
   // Normalize the input to match your property keys
-  const prefix = modelName.toUpperCase(); 
-  
+  const prefix = modelName.toUpperCase();
+
   return {
     endpoint: scriptProperties.getProperty(`${prefix}_ENDPOINT`),
     apiKey: scriptProperties.getProperty(`${prefix}_API_KEY`),
@@ -12,32 +15,32 @@ function getAIConfiguration(modelName, aiModel) {
   };
 }
 
+/**
+ *  Generate Prompt and call AI API to check whether an email is relevant to a job application
+ */
+function queryAIforJobApplicationSubject(subjectplusbodysnip, aiConf) {
 
-function queryAIforsubject(subjectplusbodysnip, aiConf) {
 
-  
   const prompt = `Read the attached email and decide whether it relates to one of MY job applications — e.g. an application confirmation, a recruiter reply, an interview invitation/scheduling, a rejection, or an offer. Generic job alerts, newsletters, surveys, account verification, OTP, password setup /reset, platform registration or marketing emails are NOT job-related.
-  1 if it is related to one of my job applications.
-  0 if it is not.
+  return response as a json object
+  {
+    "is_job_related":   1 if it is related to one of my job applications. 0 if it is not.
+  }
+
   No explanation. No extra text.
   Email subject and body snippet: ${subjectplusbodysnip}*`;
 
 
-  const obj = callAI(aiConf, prompt)
-  
-  if (
-    obj.candidates &&
-    obj.candidates.length > 0 &&
-    obj.candidates[0].content.parts.length > 0
-  ) {
-    return obj.candidates[0].content.parts[0].text;
-  } else {
-        console.warn("No response.");
-      }
-  } 
 
+  const jsonResponse = callAI(aiConf, prompt)
+  return jsonResponse.is_job_related;
 
-function queryAIforBody(subjectplusbody, aiConf) {
+}
+
+/**
+ *  Generate Prompt and call AI API to retreive job application updates from an email subject and body
+ */
+function queryAIforJobApplicationBody(subjectplusbody, aiConf) {
 
 
   // Create the prompt
@@ -68,14 +71,13 @@ function queryAIforBody(subjectplusbody, aiConf) {
       }
     ]
   }
-  DO NOT INCLUDE ANY SYNTAX HIGHLIGHTING OR CODE BLOCK FORMATTING. Here is the email: ${subjectplusbody}`;
+  DO NOT INCLUDE ANY SYNTAX HIGHLIGHTING OR CODE BLOCK FORMATTING or backquote characters. Here is the email: ${subjectplusbody}`;
 
+  //Logger.log(prompt);
   // Make the API call and handle the response
-  const jsonResponse = callAI(aiConf, prompt)
-  const jobInfo = JSON.parse(jsonResponse.candidates[0].content.parts[0].text).job_info[0];
-  const totalTokenCount = jsonResponse.usageMetadata.totalTokenCount;
-  
-  return {"jobInfo": jobInfo, "totalTokenCount" : totalTokenCount} 
+  const response = callAI(aiConf, prompt);
+  return response.job_info[0]
+
 }
 
 function formatDate(date) {
@@ -85,95 +87,174 @@ function formatDate(date) {
   return `${year}-${month < 10 ? '0' + month : month}-${day < 10 ? '0' + day : day}`;
 }
 
+/**
+ *  Generate Prompt and call AI API for checking whether a JD matches a resume
+ */
+function queryAIforJobMatching(aiConf, resumeText, body) {
 
-function callAI(config, prompt) {
+  const prompt = `
+        Resume of candidate:
+        ---
+        ${resumeText}
+        ---
 
+        Email text:
+        ---
+        ${body}
+        ---
+        
+        Analyze this email. Extract any job listings mentioned. For each listing, evaluate if it is a match for the candidate's skills, tech stack, and background. Only output listings that are a good or strong match (match_score of 70 or higher). Make sure to exclude listings that requires chinese speaking skills (either mandarin or cantonese)
+      `;
+
+  const systemInstruction =
+    "You are an expert recruiter and career coach. Your task is to analyze a job alert email against " +
+    "a candidate's resume and extract job listings that match. " +
+    "You must return a single valid JSON object strictly adhering to the following structure:\n\n" +
+    "{\n" +
+    "  \"jobs\": [\n" +
+    "    {\n" +
+    "      \"company\": \"Company Name (string)\",\n" +
+    "      \"position\": \"Job Title/Position (string)\",\n" +
+    "      \"jd_link\": \"The exact direct URL to apply or view the job found in the email (string)\",\n" +
+    "      \"salary_range\": \"Salary details if mentioned, otherwise leave as empty string (string)\",\n" +
+    "      \"location\": \"Location of the job, otherwise leave as empty string (string)\",\n" +
+    "      \"match_reason\": \"A 1-2 sentence explanation of why this job is a good fit for the resume (string)\",\n" +
+    "      \"match_score\": \"An integer from 0 to 100 on how well the job requirements match the resume (integer)\"\n" +
+    "    }\n" +
+    "  ]\n" +
+    "}\n\n" +
+    "Rules:\n" +
+    "1. Only include jobs that meet or exceed a match_score of 70.\n" +
+    "2. Do not write any explanatory text outside of the JSON block.\n" +
+    "3. Try to extract the direct tracking or referral URL ('jd_link') accurately from the email content."
+
+
+  return response = callAI(aiConf, prompt, systemInstruction);
+
+}
+
+/**
+ * Generic AI integration function
+ * Automatically handles routing, JSON-mode enforcement, rate-limiting, 
+ * and normalizes responses across Google Gemini, OpenAI, and DeepSeek.
+ * 
+ * @param {Object} config - Configuration object containing credentials, endpoints, and model info
+ * @param {string} prompt - The primary user prompt
+ * @param {string} [systemInstruction] - Optional system personality instruction
+ * @returns {Object|string} Automatically parsed JSON object or plain-text string
+ */
+function callAI(config, prompt, systemInstruction) {
   let payload = null;
   let options = null;
   let url = config.endpoint;
+  const systemMessage = systemInstruction || "You are a helpful career coach.";
 
-  // Define the payload  and options based on the model 
-  //Google
-  if(config.modelName == "google"){
+  // Define the payload and options based on the model 
+  // Google
+  if (config.modelName == "google") {
     payload = {
       "contents": [
         {
           "parts": [
-            {
-              "text": prompt
-            },
+            { "text": prompt }
           ]
         }
-      ], 
-      "generationConfig":  {
+      ],
+      "systemInstruction": {
+        "parts": [
+          { "text": systemMessage }
+        ]
+      },
+      "generationConfig": {
         "temperature": 0.2,
+        "responseMimeType": "application/json" // Enforces structured JSON output
       },
     };
 
     options = {
-      'method' : 'post',
+      'method': 'post',
       'contentType': 'application/json',
       'payload': JSON.stringify(payload),
-      "muteHttpExceptions": true // Useful for debugging API errors
+      "muteHttpExceptions": true
     };
-  
+
     url = config.endpoint + config.aiModel + ":generateContent?key=" + encodeURIComponent(config.apiKey);
-  
-  //DeepSeek
-  } else if (config.modelName == "deepseek"){
+
+    // DeepSeek
+  } else if (config.modelName == "deepseek") {
     payload = {
-    "model": config.aiModel,
-    "messages": [
-      { "role": "system", "content": "You are a helpful career coach" },
-      { "role": "user", "content": prompt }
-    ],
-    "temperature": 0.2
+      "model": config.aiModel,
+      "messages": [
+        { "role": "system", "content": systemMessage },
+        { "role": "user", "content": prompt }
+      ],
+      "temperature": 0.2,
+      "response_format": { "type": "json_object" } // Enforces structured JSON output
     };
 
     options = {
-    'method': 'post',
-    'contentType': 'application/json',
-    'headers': { 'Authorization': 'Bearer ' + config.apiKey },
-    'payload': JSON.stringify(payload),
-    'muteHttpExceptions': true
+      'method': 'post',
+      'contentType': 'application/json',
+      'headers': { 'Authorization': 'Bearer ' + config.apiKey },
+      'payload': JSON.stringify(payload),
+      'muteHttpExceptions': true
     };
-  //OpenAI
-  } else if (config.modelName == "openai"){
+
+    // OpenAI
+  } else if (config.modelName == "openai") {
     payload = {
-    "model": config.aiModel, 
-    "messages": [
-      { "role": "system", "content": "You are a helpful career coach." },
-      { "role": "user", "content": prompt }
-    ],
-    "temperature": 0.2
+      "model": config.aiModel,
+      "messages": [
+        { "role": "system", "content": systemMessage },
+        { "role": "user", "content": prompt }
+      ],
+      "temperature": 0.2,
+      "response_format": { "type": "json_object" } // Enforces structured JSON output
     };
 
     options = {
-    'method': 'post',
-    'contentType': 'application/json',
-    'headers': { 'Authorization': 'Bearer ' + config.apiKey },
-    'payload': JSON.stringify(payload),
-    'muteHttpExceptions': true
+      'method': 'post',
+      'contentType': 'application/json',
+      'headers': { 'Authorization': 'Bearer ' + config.apiKey },
+      'payload': JSON.stringify(payload),
+      'muteHttpExceptions': true
     };
-  } 
+  }
 
-
-  // Execute the call
-
-  // retry mechanism to limit reaching API quota
+  // Execute the call with backoff-based retry mechanism
   let retries = 5;
-  let delay = 1100; // Start with 1.5 second delay
-  while (retries > 0){
+  let delay = 1100; // Start with a 1.1-second delay
 
+  while (retries > 0) {
     let response = UrlFetchApp.fetch(url, options);
     let code = response.getResponseCode();
 
-    if (code == 200){
-      return JSON.parse(response.getContentText());
+    if (code == 200) {
+      const responseData = JSON.parse(response.getContentText());
+      let textContent = "";
+
+      // Normalize extraction based on provider structures
+      if (config.modelName == "google") {
+        if (responseData.candidates && responseData.candidates[0].content && responseData.candidates[0].content.parts[0]) {
+          textContent = responseData.candidates[0].content.parts[0].text;
+        }
+      } else if (config.modelName == "openai" || config.modelName == "deepseek") {
+        if (responseData.choices && responseData.choices[0].message) {
+          textContent = responseData.choices[0].message.content;
+        }
+      }
+
+      // Parse text into a structured JSON object if possible, otherwise return plain text
+      try {
+        return JSON.parse(textContent);
+      } catch (e) {
+        return textContent;
+      }
+
     } else if (code === 429) {
       console.warn(`Rate limited (429). Waiting ${delay}ms before retrying...`);
       Utilities.sleep(delay);
-      delay *= 2; // Double the wait time for the next attempt
+      delay *= 2; // Exponential backoff
       retries--;
     } else {
       Logger.log("Error: " + response.getContentText());
@@ -181,5 +262,4 @@ function callAI(config, prompt) {
     }
   }
   throw new Error("Maximum retries reached. Please slow down your requests.");
-
 }
