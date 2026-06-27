@@ -129,7 +129,7 @@ function queryAIforJobMatching(aiConf, resumeText, body) {
     "3. Try to extract the direct tracking or referral URL ('jd_link') accurately from the email content."
 
 
-  return response = callAI(aiConf, prompt, systemInstruction);
+  return callAI(aiConf, prompt, systemInstruction);
 
 }
 
