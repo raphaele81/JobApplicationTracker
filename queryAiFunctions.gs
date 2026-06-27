@@ -122,7 +122,7 @@ function callAI(config, prompt) {
   //DeepSeek
   } else if (config.modelName == "deepseek"){
     payload = {
-    "model": "${config.aiModel}",
+    "model": config.aiModel,
     "messages": [
       { "role": "system", "content": "You are a helpful career coach" },
       { "role": "user", "content": prompt }
@@ -140,7 +140,7 @@ function callAI(config, prompt) {
   //OpenAI
   } else if (config.modelName == "openai"){
     payload = {
-    "model": "${config.aiModel}", 
+    "model": config.aiModel, 
     "messages": [
       { "role": "system", "content": "You are a helpful career coach." },
       { "role": "user", "content": prompt }
