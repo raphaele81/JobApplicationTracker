@@ -28,7 +28,7 @@ function processJobApplicationUpdates(aiConfSubject, aiConfBody) {
           const subjectplusbody = "subject: " + message.getSubject() + " body: " + body;
           var jobInfo = queryAIforJobApplicationBody(subjectplusbody, aiConfBody)
         } catch (parseError) {
-          Logger.log(`Error querying  ${modelNameBody}` + parseError);
+          Logger.log(`Error querying  ${aiConfBody}` + parseError);
         }
         // Check if 'joninfo' exists and has elements
 
