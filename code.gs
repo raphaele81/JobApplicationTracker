@@ -18,7 +18,7 @@ const AI_SIMPLE_MODEL_PROVIDER = "google"
 const AI_SIMPLE_MODEL_NAME = "gemini-3.1-flash-lite"
 
 const AI_COMPLEX_MODEL_PROVIDER = "google"
-const AI_COMPLEX_MODEL_NAME = "gemini-3.1-flash-lite"
+const AI_COMPLEX_MODEL_NAME = "gemini-3.5-flash"
 
 //const modelProvider = "openai"
 //const modelName = "gpt-5.4-mini"
